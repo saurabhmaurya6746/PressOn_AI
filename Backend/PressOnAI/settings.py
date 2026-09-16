@@ -149,19 +149,34 @@ MAX_UPLOAD_SIZE = 15 * 1024 * 1024  # 15 MB
 DATA_UPLOAD_MAX_MEMORY_SIZE = 15 * 1024 * 1024
 FILE_UPLOAD_MAX_MEMORY_SIZE = 15 * 1024 * 1024
 
-# CORS Configuration for Aura Nails frontend integration
+# ==============================================================================
+# CORS Configuration for Aura Nails Studio Integration
+# ==============================================================================
+
+# Default trusted origins for local development and deployed production frontend
+DEFAULT_CORS_ALLOWED_ORIGINS = [
+    "https://aura-nails-ad6m.onrender.com",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:8080",
+    "http://127.0.0.1:8080",
+]
+
+# Support optional custom / additional origins from environment variable
 cors_origins_env = os.getenv("CORS_ALLOWED_ORIGINS", "")
 if cors_origins_env:
-    CORS_ALLOWED_ORIGINS = [origin.strip() for origin in cors_origins_env.split(",") if origin.strip()]
-else:
-    # Default development origins; production uses CORS_ALLOWED_ORIGINS environment variable
-    CORS_ALLOWED_ORIGINS = [
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "http://localhost:8080",
-        "http://127.0.0.1:8080",
+    # Normalize: strip whitespace and accidental trailing slashes (e.g. 'https://host.com/' -> 'https://host.com')
+    env_origins = [
+        origin.strip().rstrip("/")
+        for origin in cors_origins_env.split(",")
+        if origin.strip()
     ]
+    # Merge env origins with default origins, preserving uniqueness and order
+    CORS_ALLOWED_ORIGINS = list(dict.fromkeys(DEFAULT_CORS_ALLOWED_ORIGINS + env_origins))
+else:
+    CORS_ALLOWED_ORIGINS = DEFAULT_CORS_ALLOWED_ORIGINS
 
 CORS_ALLOW_ALL_ORIGINS = False
+

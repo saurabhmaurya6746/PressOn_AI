@@ -248,3 +248,14 @@ class AnalyzeHandApiTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.headers.get("Access-Control-Allow-Origin"), "http://localhost:3000")
 
+    def test_j_production_cors_headers(self):
+        """J. CORS headers are returned for deployed production frontend origin."""
+        response = self.client.options(
+            self.api_url,
+            HTTP_ORIGIN="https://aura-nails-ad6m.onrender.com",
+            HTTP_ACCESS_CONTROL_REQUEST_METHOD="POST"
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.headers.get("Access-Control-Allow-Origin"), "https://aura-nails-ad6m.onrender.com")
+
+
