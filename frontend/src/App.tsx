@@ -1,4 +1,4 @@
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { ScrollToTop } from "@/components/common/ScrollToTop";
@@ -24,6 +24,7 @@ export function App() {
           <Route path="/services" element={<Services />} />
           <Route path="/gallery" element={<Gallery />} />
           <Route path="/ai-nail-size-finder" element={<AISizeFinder />} />
+          <Route path="/ai-size-finder" element={<Navigate to="/ai-nail-size-finder" replace />} />
           <Route path="/faq" element={<FAQ />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/booking" element={<Booking />} />

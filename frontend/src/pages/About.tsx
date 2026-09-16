@@ -25,26 +25,31 @@ export function About() {
       </PageIntro>
 
       {/* Founder Story */}
-      <section className="py-24">
-        <div className="section-shell grid items-center gap-14 lg:grid-cols-2">
-          <div className="relative">
-            <img
-              src={founderImage}
-              alt="Khushi, founder of Aura Nails"
-              width={1008}
-              height={1200}
-              className="aspect-[4/5] w-full object-cover shadow-luxe"
-            />
-            <div className="absolute -bottom-6 -right-3 bg-lavender p-6 font-display text-2xl sm:right-8">
-              Made with intention
+      <section className="py-20 sm:py-24 lg:py-28">
+        <div className="section-shell grid items-center gap-12 sm:gap-14 lg:grid-cols-12 lg:gap-16 xl:gap-20">
+          <div className="lg:col-span-5 xl:col-span-5">
+            <div className="relative mx-auto w-full max-w-md lg:max-w-none">
+              <div className="overflow-hidden rounded-2xl bg-muted/40 shadow-luxe">
+                <img
+                  src={founderImage}
+                  alt="Khushi, founder of Aura Nails"
+                  width={900}
+                  height={1110}
+                  className="aspect-[4/5] w-full object-cover object-center transition-transform duration-700 hover:scale-[1.015]"
+                  loading="lazy"
+                />
+              </div>
+              <div className="absolute -bottom-5 -right-2 sm:-bottom-6 sm:right-6 md:right-8 bg-lavender/95 px-6 py-4 sm:px-7 sm:py-5 font-display text-xl sm:text-2xl tracking-wide text-foreground shadow-soft backdrop-blur-xs">
+                Made with intention
+              </div>
             </div>
           </div>
-          <div>
+          <div className="flex flex-col justify-center lg:col-span-7 xl:col-span-7 lg:py-4 xl:pl-4">
             <SectionHeading
               eyebrow="A passion in every detail"
               title="Artistry you can feel"
             />
-            <div className="mt-7 space-y-5 leading-8 text-muted-foreground">
+            <div className="mt-8 space-y-6 text-base sm:text-lg leading-relaxed text-muted-foreground font-sans">
               <p>
                 Aura Nails began with Khushi’s love for transforming small
                 details into something deeply personal. Every extension,
