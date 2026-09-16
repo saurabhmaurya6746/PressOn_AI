@@ -1,10 +1,24 @@
-django<5.2,>=4.2
-numpy==1.26.4
-pillow>=10.0.0
-scipy>=1.11.0
+# ==============================================================================
+# PressOn AI - Production Dependencies (Render Deployment)
+# Target Runtime: Python 3.12.x (Recommended: 3.12.4)
+# ==============================================================================
+
+# Core Web Framework & Server Middleware
+Django>=5.0,<5.2
+django-cors-headers>=4.4.0
+whitenoise>=6.6.0
 gunicorn>=21.2.0
-whitenoise>=6.5.0
-requests
-django-cors-headers
-opencv-python-headless
-mediapipe
+
+# Computer Vision, Mathematics & Image Processing
+numpy>=1.26.0,<2.0.0
+Pillow>=10.0.0
+opencv-python-headless>=4.8.0
+mediapipe>=0.10.14
+scipy>=1.11.0
+
+# Deep Learning & AI Inference (YOLOv11 Segmentation)
+ultralytics>=8.2.0
+
+# HTTP Client (Verification & Test Utilities)
+requests>=2.31.0
+
