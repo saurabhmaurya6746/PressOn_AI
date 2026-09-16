@@ -66,12 +66,13 @@ def run_pipeline(image_path, request=None, db_obj=None):
         landmarks = []
         landmark_count = 0
 
-    # 3. Local YOLO Nail Segmentation
+    # 3. Local YOLO Nail Segmentation (Strictly CPU)
     results = MODEL.predict(
         source=image_path,
         conf=0.30,
         save=False,
-        verbose=False
+        verbose=False,
+        device="cpu",
     )
     result_item = results[0]
 
@@ -199,6 +200,10 @@ def run_pipeline(image_path, request=None, db_obj=None):
     else:
         processed_image_url = ""
 
+    # Immediately release temporary OpenCV / NumPy / PyTorch memory buffers
+    import gc
+    gc.collect()
+
     return {
         "coin_detected": coin_detected,
         "coin_data": coin_data,
@@ -208,3 +213,4 @@ def run_pipeline(image_path, request=None, db_obj=None):
         "processed_file_path": processed_file_path,
         "processed_image_url": processed_image_url,
     }
+

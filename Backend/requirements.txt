@@ -1,6 +1,7 @@
 # ==============================================================================
 # PressOn AI - Production Dependencies (Render Deployment)
 # Target Runtime: Python 3.12.x (Recommended: 3.12.4)
+# Optimized for CPU-Only Cloud Instances (512MB RAM Limit)
 # ==============================================================================
 
 # Core Web Framework & Server Middleware

@@ -7,13 +7,6 @@ from django.core.files.base import ContentFile
 from django.conf import settings
 
 from .models import HandMeasurement
-from utils.coin_detector import get_pixel_to_mm_ratio
-from utils.hand_detector import detect_hand
-from ai.inference import MODEL
-from utils.measurement import measure_nails
-from utils.finger_identifier import identify_fingers
-from utils.image_utils import draw_measurements
-from utils.size_recommender import recommend_size
 
 
 ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}

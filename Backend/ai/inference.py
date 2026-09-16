@@ -1,18 +1,57 @@
 import os
-from ultralytics import YOLO
+import threading
 from utils.measurement import measure_nails
 from utils.image_utils import draw_measurements
 
 WEIGHTS_PATH = os.path.join(os.path.dirname(__file__), "weights", "best.pt")
-MODEL = YOLO(WEIGHTS_PATH if os.path.exists(WEIGHTS_PATH) else "ai/weights/best.pt")
+_model = None
+_model_lock = threading.Lock()
+
+
+def get_model():
+    """Thread-safe lazy singleton loader for YOLOv11 segmentation model.
+    Defers PyTorch & weights loading until first inference call to prevent Django startup OOM.
+    """
+    global _model
+    if _model is None:
+        with _model_lock:
+            if _model is None:
+                try:
+                    import torch
+                    torch.set_num_threads(1)
+                    if hasattr(torch, "set_num_interop_threads"):
+                        torch.set_num_interop_threads(1)
+                except Exception:
+                    pass
+
+                from ultralytics import YOLO
+                resolved_path = WEIGHTS_PATH if os.path.exists(WEIGHTS_PATH) else "ai/weights/best.pt"
+                _model = YOLO(resolved_path)
+    return _model
+
+
+class _LazyModelProxy:
+    """Proxy object preserving full backward compatibility for:
+    from ai.inference import MODEL
+    while deferring heavy PyTorch / YOLO initialization until first inference call.
+    """
+    def __getattr__(self, name):
+        return getattr(get_model(), name)
+
+    def __call__(self, *args, **kwargs):
+        return get_model()(*args, **kwargs)
+
+
+MODEL = _LazyModelProxy()
 
 
 def predict_nails(image_path, coin_diameter=100.0):
-    results = MODEL.predict(
+    results = get_model().predict(
         source=image_path,
         conf=0.30,
         save=False,
-        verbose=False
+        verbose=False,
+        device="cpu",
     )
 
     result = results[0]
