@@ -13,7 +13,7 @@ gunicorn>=21.2.0
 numpy>=1.26.0,<2.0.0
 Pillow>=10.0.0
 opencv-python-headless>=4.8.0
-mediapipe>=0.10.14
+mediapipe==0.10.14
 scipy>=1.11.0
 
 # Deep Learning & AI Inference (YOLOv11 Segmentation)
