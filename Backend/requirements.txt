@@ -7,3 +7,4 @@ whitenoise>=6.5.0
 requests
 django-cors-headers
 opencv-python-headless
+mediapipe
