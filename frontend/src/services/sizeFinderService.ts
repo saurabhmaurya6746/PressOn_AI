@@ -6,8 +6,12 @@ export const ALLOWED_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp"];
 export const MAX_IMAGE_SIZE_BYTES = 15 * 1024 * 1024; // 15 MB
 
 const API_BASE_URL =
-  (typeof import.meta !== "undefined" && (import.meta as any).env?.VITE_PRESSON_AI_API_URL) ||
-  "http://127.0.0.1:8000";
+  (typeof import.meta !== "undefined" &&
+    ((import.meta as any).env?.VITE_PRESSON_API_URL ||
+      (import.meta as any).env?.VITE_PRESSON_AI_API_URL)) ||
+  (typeof import.meta !== "undefined" && (import.meta as any).env?.PROD
+    ? "https://presson-ai-api.onrender.com"
+    : "http://127.0.0.1:8000");
 
 export function validateNailPhoto(file: File): { isValid: boolean; error?: string } {
   const extension = "." + file.name.split(".").pop()?.toLowerCase();
@@ -68,7 +72,11 @@ export function adaptApiResponseToNailResult(apiData: PressOnApiResponse): NailS
     rightHand: fingerSizes,
     measurements: fingerSizes,
     summaryProfile,
-    processed_image_url: apiData.processed_image_url,
+    processed_image_url: apiData.processed_image_url
+      ? (apiData.processed_image_url.startsWith("http")
+          ? apiData.processed_image_url
+          : `${API_BASE_URL.replace(/\/+$/, "")}${apiData.processed_image_url.startsWith("/") ? "" : "/"}${apiData.processed_image_url}`)
+      : undefined,
     coin_detected: apiData.coin_detected,
     landmark_count: apiData.landmark_count,
   };
@@ -76,7 +84,7 @@ export function adaptApiResponseToNailResult(apiData: PressOnApiResponse): NailS
 
 /**
  * Sends uploaded hand photo to the PressOn AI backend endpoint:
- * POST http://127.0.0.1:8000/api/analyze/
+ * POST /api/analyze/
  */
 export async function analyzeNailImage(image: File): Promise<NailSizeResult> {
   const validation = validateNailPhoto(image);
@@ -99,7 +107,7 @@ export async function analyzeNailImage(image: File): Promise<NailSizeResult> {
   } catch (networkError) {
     console.error("PressOn AI connection error:", networkError);
     throw new Error(
-      "Unable to connect to the AI sizing service. Please make sure the AI service is running and try again."
+      "Unable to connect to the AI sizing service. Please ensure the backend is running and CORS allows requests from this domain."
     );
   }
 
