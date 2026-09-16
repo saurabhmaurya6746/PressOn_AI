@@ -16,18 +16,23 @@ def get_model():
     if _model is None:
         with _model_lock:
             if _model is None:
+                import time
+                t_load = time.time()
+                print("[AI] 3/5 Model loading started: initializing PyTorch CPU runtime and YOLOv11...")
                 try:
                     import torch
-                    torch.set_num_threads(1)
+                    torch.set_num_threads(2)
                     if hasattr(torch, "set_num_interop_threads"):
                         torch.set_num_interop_threads(1)
-                except Exception:
-                    pass
+                except Exception as th_err:
+                    print(f"[AI] PyTorch thread config note: {th_err}")
 
                 from ultralytics import YOLO
                 resolved_path = WEIGHTS_PATH if os.path.exists(WEIGHTS_PATH) else "ai/weights/best.pt"
                 _model = YOLO(resolved_path)
+                print(f"[AI] 3/5 Model loading completed in {time.time() - t_load:.2f}s (YOLOv11 ready on CPU)")
     return _model
+
 
 
 class _LazyModelProxy:

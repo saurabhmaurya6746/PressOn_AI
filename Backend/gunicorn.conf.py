@@ -3,6 +3,10 @@
 # ==============================================================================
 import os
 
+# Bind to 0.0.0.0:$PORT required by Render's reverse proxy router
+port = os.environ.get("PORT", "10000")
+bind = f"0.0.0.0:{port}"
+
 # Limit workers strictly to 1 to ensure only ONE instance of the AI model / PyTorch
 # is ever resident in RAM (prevents OOM on 512MB free/starter tier).
 workers = 1
@@ -23,5 +27,7 @@ keepalive = 5
 max_requests = 1000
 max_requests_jitter = 50
 
-# Log level
+# Log level & output streaming to stdout/stderr for Render log viewer
 loglevel = "info"
+accesslog = "-"
+errorlog = "-"

@@ -203,7 +203,14 @@ def analyze_hand_api(request):
             }
         - HTTP 500 Internal Server Error: Unexpected processing failure.
     """
+    import time
+    t_api_start = time.time()
+    origin = request.headers.get("Origin", "None")
+    client_ip = request.META.get("REMOTE_ADDR", "unknown")
+    print(f"[API] 1/7 Request received: method=POST, origin={origin}, client_ip={client_ip}", flush=True)
+
     if "image" not in request.FILES:
+        print("[API] Request rejected: missing 'image' field in multipart form data", flush=True)
         return JsonResponse({
             "success": False,
             "coin_detected": False,
@@ -211,9 +218,11 @@ def analyze_hand_api(request):
         }, status=400)
 
     image_file = request.FILES["image"]
+    file_size_kb = round(image_file.size / 1024, 2)
 
     # 1. File size check (Max 15MB)
     if image_file.size > MAX_UPLOAD_SIZE:
+        print(f"[API] Request rejected: image too large ({file_size_kb} KB > {MAX_UPLOAD_SIZE // 1024} KB)", flush=True)
         return JsonResponse({
             "success": False,
             "coin_detected": False,
@@ -223,6 +232,7 @@ def analyze_hand_api(request):
     # 2. File extension check
     ext = os.path.splitext(image_file.name)[1].lower()
     if ext not in ALLOWED_EXTENSIONS:
+        print(f"[API] Request rejected: invalid file extension '{ext}'", flush=True)
         return JsonResponse({
             "success": False,
             "coin_detected": False,
@@ -232,6 +242,7 @@ def analyze_hand_api(request):
     # 3. MIME type check
     content_type = getattr(image_file, "content_type", "").lower()
     if content_type and content_type not in ALLOWED_MIME_TYPES:
+        print(f"[API] Request rejected: invalid MIME type '{content_type}'", flush=True)
         return JsonResponse({
             "success": False,
             "coin_detected": False,
@@ -244,7 +255,9 @@ def analyze_hand_api(request):
         image_file.seek(0)
         with Image.open(image_file) as test_img:
             test_fmt = (test_img.format or "").upper()
+            img_width, img_height = test_img.size
             if test_fmt not in ALLOWED_PIL_FORMATS:
+                print(f"[API] Request rejected: PIL format '{test_fmt}' not allowed", flush=True)
                 return JsonResponse({
                     "success": False,
                     "coin_detected": False,
@@ -252,7 +265,9 @@ def analyze_hand_api(request):
                 }, status=400)
             test_img.verify()
         image_file.seek(0)
-    except Exception:
+        print(f"[API] 2/7 Image validation completed: filename='{image_file.name}', format={test_fmt}, size={file_size_kb} KB, dimensions={img_width}x{img_height}", flush=True)
+    except Exception as img_err:
+        print(f"[API] Image verification error: {img_err}", flush=True)
         return JsonResponse({
             "success": False,
             "coin_detected": False,
@@ -262,9 +277,10 @@ def analyze_hand_api(request):
     # 5. Persist upload and run the shared AI pipeline
     try:
         hand_obj = HandMeasurement.objects.create(image=image_file)
+        print(f"[API] 3/7 Database record created (id={hand_obj.id}). Invoking AI pipeline...", flush=True)
         pipeline_res = run_pipeline(hand_obj.image.path, request=request, db_obj=hand_obj)
     except Exception as pipe_err:
-        print("[API PIPELINE ERROR]", pipe_err)
+        print("[API PIPELINE ERROR]", pipe_err, flush=True)
         return JsonResponse({
             "success": False,
             "coin_detected": False,
@@ -273,6 +289,7 @@ def analyze_hand_api(request):
 
     # 6. Enforce strict ₹10 Coin Verification
     if not pipeline_res["coin_detected"]:
+        print("[API] 4/7 Verification result: Rs. 10 coin not verified (returning status 422)", flush=True)
         return JsonResponse({
             "success": False,
             "coin_detected": False,
@@ -281,6 +298,7 @@ def analyze_hand_api(request):
 
     # 7. Enforce Hand / Finger Detection
     if pipeline_res["landmark_count"] == 0 and not pipeline_res["identified_fingers"]:
+        print("[API] 5/7 Verification result: hand/fingers not detected (returning status 422)", flush=True)
         return JsonResponse({
             "success": False,
             "coin_detected": True,
@@ -304,6 +322,10 @@ def analyze_hand_api(request):
             "raw_width": item.get("raw_width", 0.0),
             "raw_height": item.get("raw_height", 0.0),
         })
+
+    elapsed_api = round(time.time() - t_api_start, 2)
+    print(f"[API] 6/7 Measurements formatted: {len(measurements)} fingers ready", flush=True)
+    print(f"[API] 7/7 Response generated: status=200, elapsed={elapsed_api}s, coin_detected=True, landmarks={pipeline_res['landmark_count']}, measurements_count={len(measurements)}", flush=True)
 
     return JsonResponse({
         "success": True,

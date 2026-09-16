@@ -41,10 +41,15 @@ def run_pipeline(image_path, request=None, db_obj=None):
     if not os.path.exists(image_path):
         raise FileNotFoundError(f"Image not found at path: {image_path}")
 
+    import time
+    t_pipeline = time.time()
+    img_basename = os.path.basename(image_path)
+    print(f"[PIPELINE] Starting PressOn AI processing pipeline for: {img_basename}", flush=True)
+
     # Output path for processed image inside media/processed/
     processed_dir = os.path.join(settings.MEDIA_ROOT, "processed")
     os.makedirs(processed_dir, exist_ok=True)
-    processed_filename = f"processed_{os.path.basename(image_path)}"
+    processed_filename = f"processed_{img_basename}"
     processed_file_path = os.path.join(processed_dir, processed_filename)
 
     coin_detected = False
@@ -53,20 +58,32 @@ def run_pipeline(image_path, request=None, db_obj=None):
     landmarks = []
     identified_fingers = []
 
-    # 1. Coin Detection & Scale (Strict 27.0mm ₹10 reference validation)
+    # 1. Coin Detection & Scale (Strict 27.0mm Rs. 10 reference validation)
+    print("[PIPELINE] Step 1/6: Coin detection started (strict 27.0mm Rs. 10 reference)...", flush=True)
+    t_coin = time.time()
     pixels_per_mm, coin_data = get_pixel_to_mm_ratio(image_path, real_coin_diameter_mm=27.0)
     coin_detected = (coin_data is not None)
+    coin_dur = round(time.time() - t_coin, 2)
+    if coin_detected:
+        print(f"[PIPELINE] Step 1/6: Rs. 10 coin verified in {coin_dur}s (scale={pixels_per_mm:.2f} px/mm, radius={coin_data['radius']:.1f}px)", flush=True)
+    else:
+        print(f"[PIPELINE] Step 1/6: Rs. 10 coin NOT verified in {coin_dur}s", flush=True)
 
     # 2. Hand & Landmark Detection
+    print("[PIPELINE] Step 2/6: Hand landmark detection started...", flush=True)
+    t_hand = time.time()
     try:
         landmarks = detect_hand(image_path, processed_file_path)
         landmark_count = len(landmarks)
+        print(f"[PIPELINE] Step 2/6: Hand detection completed in {time.time() - t_hand:.2f}s (landmarks={landmark_count})", flush=True)
     except Exception as hand_err:
-        print("[PIPELINE] Hand detection error:", hand_err)
+        print(f"[PIPELINE] Step 2/6: Hand detection error in {time.time() - t_hand:.2f}s: {hand_err}", flush=True)
         landmarks = []
         landmark_count = 0
 
     # 3. Local YOLO Nail Segmentation (Strictly CPU)
+    print("[PIPELINE] Step 3/6: YOLO nail segmentation started (CPU)...", flush=True)
+    t_yolo = time.time()
     results = MODEL.predict(
         source=image_path,
         conf=0.30,
@@ -75,9 +92,12 @@ def run_pipeline(image_path, request=None, db_obj=None):
         device="cpu",
     )
     result_item = results[0]
+    masks_count = len(result_item.masks.xy) if result_item.masks is not None else 0
+    print(f"[PIPELINE] Step 3/6: YOLO segmentation completed in {time.time() - t_yolo:.2f}s (masks_detected={masks_count})", flush=True)
 
     # 4 & 5. Nail Measurements & Finger Identification ONLY if coin is verified
     if coin_detected:
+        print(f"[PIPELINE] Step 4-5/6: Calculating nail measurements and mapping fingers...", flush=True)
         coin_diameter = coin_data["diameter_px"]
         if result_item.masks is not None:
             nail_measurements = measure_nails(result_item.masks.xy, coin_diameter=coin_diameter)
@@ -128,6 +148,10 @@ def run_pipeline(image_path, request=None, db_obj=None):
             if "raw_height" in item and item["raw_height"] is not None:
                 item["raw_height"] = round(float(item["raw_height"]), 2)
 
+        # Summary log for identified fingers
+        finger_summary = [f"{item['finger']}:{item.get('recommended_size')}" for item in identified_fingers]
+        print(f"[PIPELINE] Step 4-5/6: Identified and sized {len(identified_fingers)} fingers: {finger_summary}", flush=True)
+
         # Optional database persistence
         if db_obj is not None:
             for item in identified_fingers:
@@ -142,6 +166,7 @@ def run_pipeline(image_path, request=None, db_obj=None):
                 db_obj.save()
 
         # 6. Annotate Image with Green Nails and BLUE ₹10 Coin Highlight
+        print("[PIPELINE] Step 6/6: Rendering visual annotations (green nails + blue coin boundary)...", flush=True)
         base_img_path = processed_file_path if os.path.exists(processed_file_path) else image_path
         if result_item.masks is not None and nail_measurements:
             draw_measurements(base_img_path, result_item.masks.xy, nail_measurements, processed_file_path)
@@ -188,7 +213,7 @@ def run_pipeline(image_path, request=None, db_obj=None):
         # When coin is not verified, do NOT generate fake scale or measurements
         nail_measurements = []
         identified_fingers = []
-        print("[PIPELINE] ₹10 coin not verified. Sizing calculation aborted.")
+        print("[PIPELINE] Rs. 10 coin not verified. Sizing calculation aborted.", flush=True)
 
     # Generate processed image URL (absolute if request is provided, otherwise relative)
     if os.path.exists(processed_file_path):
@@ -203,6 +228,9 @@ def run_pipeline(image_path, request=None, db_obj=None):
     # Immediately release temporary OpenCV / NumPy / PyTorch memory buffers
     import gc
     gc.collect()
+
+    dur_total = round(time.time() - t_pipeline, 2)
+    print(f"[PIPELINE] Finished in {dur_total}s: coin_detected={coin_detected}, landmarks={landmark_count}, fingers={len(identified_fingers)}", flush=True)
 
     return {
         "coin_detected": coin_detected,
