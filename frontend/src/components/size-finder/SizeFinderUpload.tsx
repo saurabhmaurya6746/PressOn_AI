@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import { Camera, Upload } from "lucide-react";
+import { Camera, RefreshCw, Upload } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { PhotoGuidance } from "@/components/size-finder/PhotoGuidance";
-import exampleHandImage from "@/assets/images/size-finder-example.jpg";
+import exampleHandImage from "@/assets/images/size-finder-example.png";
 
 export interface SizeFinderUploadProps {
   file: File | null;
@@ -88,7 +88,7 @@ export function SizeFinderUpload({
 
     if (cameraPermissionState === "denied") {
       onError?.(
-        "Camera access is blocked by your browser settings. Please allow camera permissions or use \"Browse Images\" instead."
+        'Camera access is blocked by your browser settings. Please allow camera permissions or use "Browse Images" instead.'
       );
       return;
     }
@@ -99,7 +99,7 @@ export function SizeFinderUpload({
         cameraInputRef.current.click();
       }
     } catch {
-      onError?.("Unable to open camera. Please use \"Browse Images\" instead.");
+      onError?.('Unable to open camera. Please use "Browse Images" instead.');
     }
   };
 
@@ -109,31 +109,131 @@ export function SizeFinderUpload({
         <div
           onDragOver={handleDragOver}
           onDrop={handleDrop}
-          className="grid min-h-96 place-items-center border border-dashed border-lavender-deep bg-lavender/20 p-8 text-center"
+          className="relative rounded-3xl border-2 border-dashed border-lavender-deep/35 bg-card/60 p-6 sm:p-8 text-center shadow-soft transition-colors hover:border-lavender-deep/55"
         >
-          {preview ? (
-            <img
-              src={preview}
-              alt="Selected hand preview"
-              className="max-h-80 w-full object-contain"
-            />
-          ) : (
-            <div>
-              <Upload className="mx-auto size-10 text-lavender-deep" />
-              <h2 className="mt-5 font-display text-4xl">Upload your hand photo</h2>
-              <p className="mt-3 text-sm text-muted-foreground">
+          {!preview ? (
+            /* Initial State: No Image Selected — Example Guidance */
+            <div className="flex flex-col items-center">
+              <div className="flex size-12 items-center justify-center rounded-2xl bg-lavender/40 text-lavender-deep shadow-xs">
+                <Upload className="size-6 text-lavender-deep" />
+              </div>
+
+              <h2 className="mt-4 font-display text-3xl sm:text-4xl font-medium tracking-tight text-foreground">
+                Upload your hand photo
+              </h2>
+
+              <p className="mt-2 text-sm text-muted-foreground leading-relaxed max-w-md">
                 Place a physical ₹10 coin flat beside your hand under clear lighting.
-                <br />
-                JPG, JPEG, PNG or WEBP · Maximum 15 MB
+                <span className="mt-1 block text-xs text-muted-foreground/80">
+                  JPG, JPEG, PNG or WEBP · Maximum 15 MB
+                </span>
               </p>
+
+              {/* Integrated Example Illustration as a subtle visual guide */}
+              <div className="mt-6 w-full max-w-md overflow-hidden rounded-2xl border border-lavender-deep/20 bg-background/50 p-2 shadow-xs transition-transform hover:border-lavender-deep/40">
+                <div className="relative overflow-hidden rounded-xl bg-muted/20">
+                  <img
+                    src={exampleHandImage}
+                    alt="Visual guide: Hand placed flat with ₹10 coin reference"
+                    className="h-auto max-h-56 sm:max-h-64 w-full object-contain"
+                    loading="eager"
+                  />
+                </div>
+              </div>
+
+              {/* Primary Action Buttons */}
+              <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleBrowseImages}
+                  className="gap-2"
+                >
+                  <Upload className="size-4" />
+                  Browse Images
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleTakePhoto}
+                  className="gap-2"
+                >
+                  <Camera className="size-4" />
+                  Take Photo
+                </Button>
+              </div>
+            </div>
+          ) : (
+            /* Selected State: User's Actual Image Preview */
+            <div className="flex flex-col">
+              <div className="flex items-center justify-between gap-3 border-b border-border/70 pb-3 text-left">
+                <div className="flex items-center gap-2">
+                  <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="text-sm font-medium text-foreground">
+                    Photo ready for analysis
+                  </span>
+                </div>
+                <span className="max-w-[160px] sm:max-w-xs truncate text-xs text-muted-foreground">
+                  {file?.name || "Uploaded photo"}
+                </span>
+              </div>
+
+              <div className="mt-4 relative mx-auto w-full overflow-hidden rounded-2xl border border-border/80 bg-background/50 p-2 shadow-xs">
+                <div className="flex items-center justify-center overflow-hidden rounded-xl bg-muted/30">
+                  <img
+                    src={preview}
+                    alt="Selected hand preview"
+                    className="max-h-80 sm:max-h-96 w-full object-contain rounded-lg"
+                  />
+                </div>
+              </div>
+
+              {/* Action Controls for Selected State */}
+              <div className="mt-6 flex flex-wrap items-center justify-between gap-3 pt-2">
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleBrowseImages}
+                    className="gap-1.5"
+                  >
+                    <RefreshCw className="size-3.5" />
+                    Change Photo
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleTakePhoto}
+                    className="gap-1.5"
+                  >
+                    <Camera className="size-3.5" />
+                    Retake
+                  </Button>
+                </div>
+
+                <Button
+                  type="button"
+                  onClick={onAnalyze}
+                  className="gap-2 shadow-soft hover:shadow-md"
+                >
+                  Analyze Nail Sizes
+                  <span aria-hidden="true">&rarr;</span>
+                </Button>
+              </div>
             </div>
           )}
         </div>
 
         {error && (
-          <p role="alert" className="mt-3 text-sm text-destructive">
-            {error}
-          </p>
+          <div
+            role="alert"
+            className="mt-4 flex items-center gap-2 rounded-xl border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive"
+          >
+            <span className="size-1.5 rounded-full bg-destructive shrink-0" />
+            <span>{error}</span>
+          </div>
         )}
 
         <input
@@ -167,78 +267,9 @@ export function SizeFinderUpload({
             e.target.value = "";
           }}
         />
-
-        <div className="mt-5 flex flex-wrap gap-3">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleBrowseImages}
-          >
-            <Upload className="size-4" />
-            Browse Images
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleTakePhoto}
-          >
-            <Camera className="size-4" />
-            Take Photo
-          </Button>
-          {file && (
-            <Button onClick={onAnalyze}>
-              Analyze Nail Sizes
-            </Button>
-          )}
-        </div>
-
-        {/* Example / Demo Photo Card */}
-        <div className="mt-8 rounded-2xl border border-border/80 bg-card p-5 sm:p-6 shadow-soft">
-          <div className="flex items-center justify-between gap-3 mb-3">
-            <span className="text-xs font-bold uppercase tracking-[.18em] text-lavender-deep">
-              Example Photo
-            </span>
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-700 ring-1 ring-blue-600/20">
-              <span className="size-2 rounded-full bg-blue-600 animate-pulse" />
-              ₹10 Reference Coin
-            </span>
-          </div>
-
-          <div className="relative mx-auto overflow-hidden rounded-xl bg-muted/40 aspect-[4/3] max-w-lg shadow-sm">
-            <img
-              src={exampleHandImage}
-              alt="Example hand photo with ₹10 reference coin"
-              className="h-full w-full object-contain"
-              loading="lazy"
-            />
-
-            {/* Subtle visual indication / highlight around the ₹10 coin */}
-            <div
-              className="absolute rounded-full border-2 border-blue-600 bg-blue-500/15 shadow-[0_0_14px_rgba(37,99,235,0.45)] pointer-events-none"
-              style={{
-                left: "70.6%",
-                top: "44.9%",
-                width: "14.5%",
-                aspectRatio: "1 / 1",
-                transform: "translate(-50%, -50%)",
-              }}
-              aria-label="₹10 calibration coin highlight"
-            >
-              <span className="absolute -inset-1 rounded-full border border-blue-400/50 animate-ping opacity-40" />
-              <span className="absolute -top-7 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-foreground/90 px-2.5 py-0.5 text-[10px] font-medium text-background shadow-md backdrop-blur-xs">
-                ₹10 Reference Coin
-              </span>
-            </div>
-          </div>
-
-          <p className="mt-4 text-center text-xs sm:text-sm text-muted-foreground leading-relaxed">
-            This is the type of photo you should upload — keep the ₹10 coin flat beside your hand for accurate measurement.
-          </p>
-        </div>
       </div>
 
       <PhotoGuidance />
     </div>
   );
 }
-
