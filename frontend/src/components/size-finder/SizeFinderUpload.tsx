@@ -2,6 +2,7 @@ import { useRef } from "react";
 import { Camera, Upload } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { PhotoGuidance } from "@/components/size-finder/PhotoGuidance";
+import exampleHandImage from "@/assets/images/size-finder-example.jpg";
 
 export interface SizeFinderUploadProps {
   file: File | null;
@@ -104,9 +105,54 @@ export function SizeFinderUpload({
             </Button>
           )}
         </div>
+
+        {/* Example / Demo Photo Card */}
+        <div className="mt-8 rounded-2xl border border-border/80 bg-card p-5 sm:p-6 shadow-soft">
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <span className="text-xs font-bold uppercase tracking-[.18em] text-lavender-deep">
+              Example Photo
+            </span>
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-700 ring-1 ring-blue-600/20">
+              <span className="size-2 rounded-full bg-blue-600 animate-pulse" />
+              ₹10 Reference Coin
+            </span>
+          </div>
+
+          <div className="relative mx-auto overflow-hidden rounded-xl bg-muted/40 aspect-[4/3] max-w-lg shadow-sm">
+            <img
+              src={exampleHandImage}
+              alt="Example hand photo with ₹10 reference coin"
+              className="h-full w-full object-contain"
+              loading="lazy"
+            />
+
+            {/* Subtle visual indication / highlight around the ₹10 coin */}
+            <div
+              className="absolute rounded-full border-2 border-blue-600 bg-blue-500/15 shadow-[0_0_14px_rgba(37,99,235,0.45)] pointer-events-none"
+              style={{
+                left: "70.6%",
+                top: "44.9%",
+                width: "14.5%",
+                aspectRatio: "1 / 1",
+                transform: "translate(-50%, -50%)",
+              }}
+              aria-label="₹10 calibration coin highlight"
+            >
+              <span className="absolute -inset-1 rounded-full border border-blue-400/50 animate-ping opacity-40" />
+              <span className="absolute -top-7 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-foreground/90 px-2.5 py-0.5 text-[10px] font-medium text-background shadow-md backdrop-blur-xs">
+                ₹10 Reference Coin
+              </span>
+            </div>
+          </div>
+
+          <p className="mt-4 text-center text-xs sm:text-sm text-muted-foreground leading-relaxed">
+            This is the type of photo you should upload — keep the ₹10 coin flat beside your hand for accurate measurement.
+          </p>
+        </div>
       </div>
 
       <PhotoGuidance />
     </div>
   );
 }
+
