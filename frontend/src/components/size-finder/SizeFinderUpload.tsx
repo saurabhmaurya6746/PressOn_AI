@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Camera, RefreshCw, Upload } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { PhotoGuidance } from "@/components/size-finder/PhotoGuidance";
-import exampleHandImage from "@/assets/images/size-finder-example.png";
+import exampleHandImage from "@/assets/images/size-finder-example.webp";
 
 export interface SizeFinderUploadProps {
   file: File | null;
@@ -14,15 +14,24 @@ export interface SizeFinderUploadProps {
 }
 
 function normalizeCapturedFile(file: File): File {
-  if (file.name && file.name.includes(".")) {
+  try {
+    if (file.name && file.name.includes(".")) {
+      return file;
+    }
+    const ext =
+      file.type === "image/png"
+        ? ".png"
+        : file.type === "image/webp"
+        ? ".webp"
+        : ".jpg";
+    const name = (file.name || "captured_photo") + ext;
+    return new File([file], name, {
+      type: file.type || "image/jpeg",
+      lastModified: file.lastModified || Date.now(),
+    });
+  } catch {
     return file;
   }
-  const ext = file.type === "image/png" ? ".png" : file.type === "image/webp" ? ".webp" : ".jpg";
-  const name = (file.name || "captured_photo") + ext;
-  return new File([file], name, {
-    type: file.type || "image/jpeg",
-    lastModified: file.lastModified || Date.now(),
-  });
 }
 
 export function SizeFinderUpload({
@@ -66,24 +75,38 @@ export function SizeFinderUpload({
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
+    e.stopPropagation();
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      onFileSelect(normalizeCapturedFile(e.dataTransfer.files[0]));
+      try {
+        onFileSelect(normalizeCapturedFile(e.dataTransfer.files[0]));
+      } catch (err) {
+        console.error("Error processing dropped file:", err);
+      }
     }
   };
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
+    e.stopPropagation();
   };
 
-  const handleBrowseImages = () => {
+  const handleBrowseImages = (e?: React.MouseEvent) => {
+    e?.preventDefault();
+    e?.stopPropagation();
     onError?.("");
     if (fileInputRef.current) {
-      fileInputRef.current.value = "";
+      try {
+        fileInputRef.current.value = "";
+      } catch {
+        // ignore
+      }
       fileInputRef.current.click();
     }
   };
 
-  const handleTakePhoto = () => {
+  const handleTakePhoto = (e?: React.MouseEvent) => {
+    e?.preventDefault();
+    e?.stopPropagation();
     onError?.("");
 
     if (cameraPermissionState === "denied") {
@@ -95,7 +118,11 @@ export function SizeFinderUpload({
 
     try {
       if (cameraInputRef.current) {
-        cameraInputRef.current.value = "";
+        try {
+          cameraInputRef.current.value = "";
+        } catch {
+          // ignore
+        }
         cameraInputRef.current.click();
       }
     } catch {
@@ -237,21 +264,31 @@ export function SizeFinderUpload({
         )}
 
         <input
+          id="size-finder-file-input"
+          name="size-finder-file-input"
           ref={fileInputRef}
           type="file"
           accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
           className="sr-only"
           tabIndex={-1}
           aria-hidden="true"
+          onClick={(e) => {
+            (e.target as HTMLInputElement).value = "";
+          }}
           onChange={(e) => {
-            const selected = e.target.files?.[0];
-            if (selected) {
-              onFileSelect(normalizeCapturedFile(selected));
+            try {
+              const selected = e.target.files?.[0];
+              if (selected) {
+                onFileSelect(normalizeCapturedFile(selected));
+              }
+            } catch (err) {
+              console.error("Failed to handle selected file:", err);
             }
-            e.target.value = "";
           }}
         />
         <input
+          id="size-finder-camera-input"
+          name="size-finder-camera-input"
           ref={cameraInputRef}
           type="file"
           accept="image/*"
@@ -259,12 +296,18 @@ export function SizeFinderUpload({
           className="sr-only"
           tabIndex={-1}
           aria-hidden="true"
+          onClick={(e) => {
+            (e.target as HTMLInputElement).value = "";
+          }}
           onChange={(e) => {
-            const selected = e.target.files?.[0];
-            if (selected) {
-              onFileSelect(normalizeCapturedFile(selected));
+            try {
+              const selected = e.target.files?.[0];
+              if (selected) {
+                onFileSelect(normalizeCapturedFile(selected));
+              }
+            } catch (err) {
+              console.error("Failed to handle camera captured file:", err);
             }
-            e.target.value = "";
           }}
         />
       </div>

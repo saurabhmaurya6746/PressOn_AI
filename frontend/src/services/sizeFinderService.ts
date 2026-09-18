@@ -19,15 +19,20 @@ const API_BASE_URL =
     : "http://127.0.0.1:8000");
 
 export function validateNailPhoto(file: File): { isValid: boolean; error?: string } {
-  const hasExtension = file.name && file.name.includes(".");
+  if (!file) {
+    return { isValid: false, error: "No image file provided." };
+  }
+
+  const hasExtension = Boolean(file.name && file.name.includes("."));
   const extension = hasExtension ? "." + file.name.split(".").pop()?.toLowerCase() : "";
+  const mimeType = (file.type || "").toLowerCase().split(";")[0].trim();
 
   // Validate MIME type (if provided) and extension
-  const hasValidType = !file.type || ALLOWED_IMAGE_TYPES.includes(file.type.toLowerCase());
+  const hasValidType = !mimeType || ALLOWED_IMAGE_TYPES.includes(mimeType) || mimeType.startsWith("image/");
   const hasValidExt = hasExtension ? ALLOWED_EXTENSIONS.includes(extension) : true;
 
   // At least one indicator must match a recognized image type
-  const isRecognizedType = file.type ? ALLOWED_IMAGE_TYPES.includes(file.type.toLowerCase()) : false;
+  const isRecognizedType = mimeType ? (ALLOWED_IMAGE_TYPES.includes(mimeType) || mimeType.startsWith("image/")) : false;
   const isRecognizedExt = hasExtension && ALLOWED_EXTENSIONS.includes(extension);
 
   if (!hasValidType || !hasValidExt || (!isRecognizedType && !isRecognizedExt)) {
