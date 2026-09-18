@@ -93,9 +93,17 @@
                         <td>
                             <span class="badge bg-warning text-dark fs-6 fw-bold px-4 py-2 rounded-pill shadow-xs">
                                 {% if finger.recommended_size %}
-                                    Size {{ finger.recommended_size }}
+                                    {% if "size" in finger.recommended_size|lower or finger.recommended_size == "Outside supported size range" %}
+                                        {{ finger.recommended_size }}
+                                    {% else %}
+                                        Size {{ finger.recommended_size }}
+                                    {% endif %}
                                 {% elif finger.size %}
-                                    Size {{ finger.size }}
+                                    {% if "size" in finger.size|lower or finger.size == "Outside supported size range" %}
+                                        {{ finger.size }}
+                                    {% else %}
+                                        Size {{ finger.size }}
+                                    {% endif %}
                                 {% else %}
                                     N/A
                                 {% endif %}

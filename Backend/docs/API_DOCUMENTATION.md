@@ -45,7 +45,7 @@ Returned when the image is valid, the ₹10 reference coin is verified, hand lan
   "measurements": [
     {
       "finger": "Thumb",
-      "recommended_size": "Size 9",
+      "recommended_size": "Outside supported size range",
       "width_mm": 6.68,
       "height_mm": 14.64,
       "raw_width": 47.0,

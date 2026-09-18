@@ -132,32 +132,55 @@ export function SizeFinderResults({ results, onReset }: SizeFinderResultsProps) 
             Precision width and height calibrated in millimeters
           </p>
           <div className="mt-4 divide-y divide-border">
-            {fingerItems.map((item) => (
-              <div
-                key={item.finger}
-                className="grid grid-cols-[1.4fr_auto_auto] items-center gap-4 py-3.5"
-              >
-                <div>
-                  <span className="font-medium text-foreground block">{item.finger}</span>
-                  {typeof item.width_mm === "number" && typeof item.height_mm === "number" && (
-                    <span className="text-xs text-muted-foreground">
-                      {item.width_mm.toFixed(2)} mm × {item.height_mm.toFixed(2)} mm
-                      {typeof item.raw_width === "number" && typeof item.raw_height === "number" && (
-                        <span className="ml-1 opacity-70">
-                          ({item.raw_width.toFixed(0)}×{item.raw_height.toFixed(0)} px)
-                        </span>
-                      )}
+            {fingerItems.map((item) => {
+              const isOutOfRange =
+                item.recommended_size === "Outside supported size range" ||
+                item.size === "Outside supported size range";
+              const displaySize =
+                item.recommended_size ||
+                (item.size && !isNaN(Number(item.size)) ? `Size ${item.size}` : item.size || "Unknown");
+
+              return (
+                <div
+                  key={item.finger}
+                  className="grid grid-cols-[1.4fr_auto_auto] items-center gap-4 py-3.5"
+                >
+                  <div>
+                    <span className="font-medium text-foreground block">{item.finger}</span>
+                    {typeof item.width_mm === "number" && typeof item.height_mm === "number" && (
+                      <div className="mt-0.5 space-y-0.5 text-xs text-muted-foreground">
+                        <div>
+                          {item.width_mm.toFixed(2)} mm × {item.height_mm.toFixed(2)} mm
+                        </div>
+                        <div className="text-[11px] opacity-75 font-mono">
+                          Raw: {typeof item.raw_width === "number" ? `${item.raw_width.toFixed(0)} px` : "—"} → Calibrated: {item.width_mm.toFixed(2)} mm → Mapped: {displaySize}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <div className="text-right">
+                    {isOutOfRange ? (
+                      <span className="inline-block rounded-md border border-amber-300 bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-800">
+                        Outside supported size range
+                      </span>
+                    ) : (
+                      <b className="font-display text-2xl text-foreground">
+                        {displaySize}
+                      </b>
+                    )}
+                  </div>
+                  {isOutOfRange ? (
+                    <span className="rounded-full bg-amber-100 px-3 py-1 text-[10px] font-bold uppercase text-amber-800">
+                      Custom Sizing
+                    </span>
+                  ) : (
+                    <span className="rounded-full bg-mint px-3 py-1 text-[10px] font-bold uppercase text-foreground">
+                      AI Fit
                     </span>
                   )}
                 </div>
-                <b className="font-display text-2xl">
-                  {item.recommended_size ? item.recommended_size : `Size ${item.size}`}
-                </b>
-                <span className="rounded-full bg-mint px-3 py-1 text-[10px] font-bold uppercase text-foreground">
-                  AI Fit
-                </span>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </section>
       </div>

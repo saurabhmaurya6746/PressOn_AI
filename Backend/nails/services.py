@@ -162,7 +162,7 @@ def run_pipeline(image_path, request=None, db_obj=None):
                     setattr(db_obj, db_name, item.get("width_mm"))
             if identified_fingers:
                 sizes = [f"{item['finger']}:{item.get('recommended_size', item.get('size'))}" for item in identified_fingers]
-                db_obj.recommended_size = ", ".join(sizes)
+                db_obj.recommended_size = ", ".join(sizes)[:30]
                 db_obj.save()
 
         # 6. Annotate Image with Green Nails and BLUE ₹10 Coin Highlight

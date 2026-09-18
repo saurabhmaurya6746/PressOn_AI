@@ -183,7 +183,7 @@ def analyze_hand_api(request):
           "measurements": [
             {
               "finger": "Thumb",
-              "recommended_size": "Size 9",
+              "recommended_size": "Outside supported size range",
               "width_mm": 8.92,
               "height_mm": 11.86,
               "raw_width": 76.4,
@@ -309,18 +309,29 @@ def analyze_hand_api(request):
     measurements = []
     for item in pipeline_res["identified_fingers"]:
         raw_size = item.get("recommended_size", item.get("size", ""))
-        if raw_size and raw_size != "Unknown" and not str(raw_size).lower().startswith("size"):
-            rec_size_display = f"Size {raw_size}"
+        raw_size_str = str(raw_size).strip()
+        if raw_size_str.isdigit():
+            rec_size_display = f"Size {raw_size_str}"
+        elif raw_size_str.lower().startswith("size"):
+            rec_size_display = raw_size_str
         else:
-            rec_size_display = str(raw_size)
+            rec_size_display = raw_size_str
+
+        width_mm = item.get("width_mm", 0.0)
+        height_mm = item.get("height_mm", 0.0)
+        raw_w = item.get("raw_width", item.get("width_px", 0.0))
+        raw_h = item.get("raw_height", item.get("height_px", 0.0))
+
+        # Log calculation pipeline
+        print(f"[SIZE CALC] Finger={item.get('finger')}: raw_width={raw_w}px -> calibrated_width={width_mm}mm -> mapped_size={rec_size_display}", flush=True)
 
         measurements.append({
             "finger": item.get("finger", ""),
             "recommended_size": rec_size_display,
-            "width_mm": item.get("width_mm", 0.0),
-            "height_mm": item.get("height_mm", 0.0),
-            "raw_width": item.get("raw_width", 0.0),
-            "raw_height": item.get("raw_height", 0.0),
+            "width_mm": width_mm,
+            "height_mm": height_mm,
+            "raw_width": raw_w,
+            "raw_height": raw_h,
         })
 
     elapsed_api = round(time.time() - t_api_start, 2)

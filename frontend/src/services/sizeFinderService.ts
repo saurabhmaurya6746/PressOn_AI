@@ -162,7 +162,11 @@ export async function analyzeNailImage(image: File): Promise<NailSizeResult> {
 
 export function formatSizeText(sizeOrRecommended: string | number): string {
   const s = String(sizeOrRecommended).trim();
-  return s.toLowerCase().startsWith("size") ? s : `Size ${s}`;
+  if (!s || s === "Unknown") return "Unknown";
+  if (s === "Outside supported size range") return "Outside supported size range";
+  if (s.toLowerCase().startsWith("size")) return s;
+  if (/^\d+$/.test(s)) return `Size ${s}`;
+  return s;
 }
 
 export function generateClipboardSizeText(results: NailSizeResult): string {

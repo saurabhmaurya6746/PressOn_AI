@@ -259,3 +259,49 @@ class AnalyzeHandApiTests(TestCase):
         self.assertEqual(response.headers.get("Access-Control-Allow-Origin"), "https://aura-nails-ad6m.onrender.com")
 
 
+from utils.size_recommender import recommend_size, SIZE_CHART
+
+
+class SizeRecommenderTests(TestCase):
+    """Unit tests for the authoritative Press-On AI nail size mapping (Sizes 0 to 8)."""
+
+    def test_approved_exact_nominal_sizes(self):
+        """Tests that nominal nail widths map to correct sizes."""
+        self.assertEqual(recommend_size(18.5), "0")
+        self.assertEqual(recommend_size(17.0), "0")
+        self.assertEqual(recommend_size(16.0), "1")
+        self.assertEqual(recommend_size(15.0), "2")
+        self.assertEqual(recommend_size(14.0), "3")
+        self.assertEqual(recommend_size(13.0), "4")
+        self.assertEqual(recommend_size(12.0), "5")
+        self.assertEqual(recommend_size(11.0), "6")
+        self.assertEqual(recommend_size(10.0), "7")
+        self.assertEqual(recommend_size(9.0), "8")
+
+    def test_approved_midpoint_intervals(self):
+        """Tests interval boundaries and values between nominal points."""
+        self.assertEqual(recommend_size(17.5), "0")
+        self.assertEqual(recommend_size(16.5), "0")
+        self.assertEqual(recommend_size(15.5), "1")
+        self.assertEqual(recommend_size(14.5), "2")
+        self.assertEqual(recommend_size(13.5), "3")
+        self.assertEqual(recommend_size(12.5), "4")
+        self.assertEqual(recommend_size(11.5), "5")
+        self.assertEqual(recommend_size(10.5), "6")
+        self.assertEqual(recommend_size(9.5), "7")
+        self.assertEqual(recommend_size(9.2), "8")
+
+    def test_outside_supported_range(self):
+        """Tests that widths below 9.0 mm return 'Outside supported size range' without inventing Size 9."""
+        self.assertEqual(recommend_size(6.68), "Outside supported size range")
+        self.assertEqual(recommend_size(8.99), "Outside supported size range")
+        self.assertEqual(recommend_size(0.0), "Outside supported size range")
+        self.assertEqual(recommend_size(-2.5), "Outside supported size range")
+
+    def test_invalid_and_none_values(self):
+        """Tests handling of None and invalid inputs."""
+        self.assertEqual(recommend_size(None), "Unknown")
+        self.assertEqual(recommend_size("invalid"), "Unknown")
+
+
+
