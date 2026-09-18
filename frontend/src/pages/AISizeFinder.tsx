@@ -92,6 +92,7 @@ export function AISizeFinder() {
               error={error}
               onFileSelect={handleFileSelect}
               onAnalyze={handleAnalyze}
+              onError={setError}
             />
           )}
 

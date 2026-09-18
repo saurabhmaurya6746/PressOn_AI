@@ -1,7 +1,12 @@
 import { jsPDF } from "jspdf";
 import type { NailSizeResult, FingerSize, PressOnApiResponse } from "@/types";
 
-export const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
+export const ALLOWED_IMAGE_TYPES = [
+  "image/jpeg",
+  "image/jpg",
+  "image/png",
+  "image/webp",
+];
 export const ALLOWED_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp"];
 export const MAX_IMAGE_SIZE_BYTES = 15 * 1024 * 1024; // 15 MB
 
@@ -14,13 +19,18 @@ const API_BASE_URL =
     : "http://127.0.0.1:8000");
 
 export function validateNailPhoto(file: File): { isValid: boolean; error?: string } {
-  const extension = "." + file.name.split(".").pop()?.toLowerCase();
+  const hasExtension = file.name && file.name.includes(".");
+  const extension = hasExtension ? "." + file.name.split(".").pop()?.toLowerCase() : "";
 
   // Validate MIME type (if provided) and extension
   const hasValidType = !file.type || ALLOWED_IMAGE_TYPES.includes(file.type.toLowerCase());
-  const hasValidExt = ALLOWED_EXTENSIONS.includes(extension);
+  const hasValidExt = hasExtension ? ALLOWED_EXTENSIONS.includes(extension) : true;
 
-  if (!hasValidType || !hasValidExt) {
+  // At least one indicator must match a recognized image type
+  const isRecognizedType = file.type ? ALLOWED_IMAGE_TYPES.includes(file.type.toLowerCase()) : false;
+  const isRecognizedExt = hasExtension && ALLOWED_EXTENSIONS.includes(extension);
+
+  if (!hasValidType || !hasValidExt || (!isRecognizedType && !isRecognizedExt)) {
     return {
       isValid: false,
       error: "Unsupported image format. Please upload a JPG, JPEG, PNG, or WEBP image.",
@@ -93,7 +103,12 @@ export async function analyzeNailImage(image: File): Promise<NailSizeResult> {
   }
 
   const formData = new FormData();
-  formData.append("image", image);
+  let filename = image.name || "hand_photo.jpg";
+  if (!filename.includes(".")) {
+    const ext = image.type === "image/png" ? ".png" : image.type === "image/webp" ? ".webp" : ".jpg";
+    filename = `${filename}${ext}`;
+  }
+  formData.append("image", image, filename);
 
   const endpointUrl = `${API_BASE_URL.replace(/\/+$/, "")}/api/analyze/`;
 

@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Camera, Upload } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { PhotoGuidance } from "@/components/size-finder/PhotoGuidance";
@@ -10,6 +10,19 @@ export interface SizeFinderUploadProps {
   error: string;
   onFileSelect: (file?: File) => void;
   onAnalyze: () => void;
+  onError?: (message: string) => void;
+}
+
+function normalizeCapturedFile(file: File): File {
+  if (file.name && file.name.includes(".")) {
+    return file;
+  }
+  const ext = file.type === "image/png" ? ".png" : file.type === "image/webp" ? ".webp" : ".jpg";
+  const name = (file.name || "captured_photo") + ext;
+  return new File([file], name, {
+    type: file.type || "image/jpeg",
+    lastModified: file.lastModified || Date.now(),
+  });
 }
 
 export function SizeFinderUpload({
@@ -18,19 +31,76 @@ export function SizeFinderUpload({
   error,
   onFileSelect,
   onAnalyze,
+  onError,
 }: SizeFinderUploadProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+  const [cameraPermissionState, setCameraPermissionState] = useState<
+    "granted" | "denied" | "prompt" | "unknown"
+  >("unknown");
+
+  useEffect(() => {
+    let isMounted = true;
+    if (typeof navigator !== "undefined" && navigator.permissions?.query) {
+      try {
+        navigator.permissions
+          .query({ name: "camera" as PermissionName })
+          .then((status) => {
+            if (!isMounted) return;
+            setCameraPermissionState(status.state);
+            status.onchange = () => {
+              if (isMounted) setCameraPermissionState(status.state);
+            };
+          })
+          .catch(() => {
+            // Not supported on all browsers (e.g. Safari), proceed gracefully
+          });
+      } catch {
+        // Ignore
+      }
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      onFileSelect(e.dataTransfer.files[0]);
+      onFileSelect(normalizeCapturedFile(e.dataTransfer.files[0]));
     }
   };
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
+  };
+
+  const handleBrowseImages = () => {
+    onError?.("");
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+      fileInputRef.current.click();
+    }
+  };
+
+  const handleTakePhoto = () => {
+    onError?.("");
+
+    if (cameraPermissionState === "denied") {
+      onError?.(
+        "Camera access is blocked by your browser settings. Please allow camera permissions or use \"Browse Images\" instead."
+      );
+      return;
+    }
+
+    try {
+      if (cameraInputRef.current) {
+        cameraInputRef.current.value = "";
+        cameraInputRef.current.click();
+      }
+    } catch {
+      onError?.("Unable to open camera. Please use \"Browse Images\" instead.");
+    }
   };
 
   return (
@@ -68,33 +138,49 @@ export function SizeFinderUpload({
 
         <input
           ref={fileInputRef}
-          hidden
           type="file"
           accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
-          onChange={(e) => onFileSelect(e.target.files?.[0])}
+          className="sr-only"
+          tabIndex={-1}
+          aria-hidden="true"
+          onChange={(e) => {
+            const selected = e.target.files?.[0];
+            if (selected) {
+              onFileSelect(normalizeCapturedFile(selected));
+            }
+            e.target.value = "";
+          }}
         />
         <input
           ref={cameraInputRef}
-          hidden
           type="file"
           accept="image/*"
           capture="environment"
-          onChange={(e) => onFileSelect(e.target.files?.[0])}
+          className="sr-only"
+          tabIndex={-1}
+          aria-hidden="true"
+          onChange={(e) => {
+            const selected = e.target.files?.[0];
+            if (selected) {
+              onFileSelect(normalizeCapturedFile(selected));
+            }
+            e.target.value = "";
+          }}
         />
 
         <div className="mt-5 flex flex-wrap gap-3">
           <Button
             type="button"
             variant="outline"
-            onClick={() => fileInputRef.current?.click()}
+            onClick={handleBrowseImages}
           >
             <Upload className="size-4" />
-            Browse Image
+            Browse Images
           </Button>
           <Button
             type="button"
             variant="outline"
-            onClick={() => cameraInputRef.current?.click()}
+            onClick={handleTakePhoto}
           >
             <Camera className="size-4" />
             Take Photo
