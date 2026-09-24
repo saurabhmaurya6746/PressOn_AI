@@ -3,23 +3,19 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
-
     path(
         "",
-        views.home,
-        name="home"
+        views.api_health,
+        name="api_root"
     ),
-
     path(
-        "result/<int:pk>/",
-        views.result,
-        name="result"
+        "api/health/",
+        views.api_health,
+        name="api_health"
     ),
-
     path(
         "api/analyze/",
         views.analyze_hand_api,
         name="api_analyze"
     ),
-
 ]

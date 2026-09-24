@@ -26,14 +26,14 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-!c6esvxw0adt8dn_)p_@0rs*ot*m=0*%)cc9fva#(nimui+r#g'
+SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-!c6esvxw0adt8dn_)p_@0rs*ot*m=0*%)cc9fva#(nimui+r#g')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('DEBUG', 'False').lower() in ('true', '1', 't')
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = [h.strip() for h in os.environ.get('ALLOWED_HOSTS', '*').split(',') if h.strip()]
 RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
-if RENDER_EXTERNAL_HOSTNAME:
+if RENDER_EXTERNAL_HOSTNAME and RENDER_EXTERNAL_HOSTNAME not in ALLOWED_HOSTS:
     ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
 
 
@@ -67,7 +67,7 @@ ROOT_URLCONF = 'PressOnAI.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / "templates"],  # ✨ Clean and modern path structure
+        'DIRS': [],  # API-only backend; admin templates resolved via APP_DIRS
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -129,11 +129,7 @@ USE_TZ = True
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-# Agar aapke project root me 'static' folder hai tabhi is line ko rakhein, warna deploy fail hoga
-# Agar static folder nahi banaya hai, toh niche ki 3 lines ko '#' laga kar comment kar dena.
-STATICFILES_DIRS = [
-    BASE_DIR / 'static',
-]
+STATICFILES_DIRS = []
 
 # Static storage engine for WhiteNoise (Production performance booster)
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'

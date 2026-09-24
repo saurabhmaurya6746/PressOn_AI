@@ -1,12 +1,12 @@
 import os
-import base64
-import numpy as np
-
-from django.shortcuts import render, redirect, get_object_or_404
-from django.core.files.base import ContentFile
+import time
 from django.conf import settings
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST, require_GET
 
 from .models import HandMeasurement
+from .services import run_pipeline
 
 
 ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
@@ -15,150 +15,20 @@ ALLOWED_PIL_FORMATS = {"JPEG", "PNG", "WEBP"}
 MAX_UPLOAD_SIZE = getattr(settings, "MAX_UPLOAD_SIZE", 15 * 1024 * 1024)
 
 
-def home(request):
-
-    if request.method == "POST":
-
-        image = request.FILES.get("image")
-        webcam_data = request.POST.get("webcam_image")
-
-        if not image and not webcam_data:
-            return render(request, "index.html", {
-                "error_message": "Please select an image first."
-            })
-
-        # Case 1: Webcam captured photo
-        if webcam_data:
-            try:
-                if ";base64," not in webcam_data:
-                    return render(request, "index.html", {
-                        "error_message": "Unable to read this image. Please upload a valid JPG, PNG, or WEBP image."
-                    })
-
-                fmt, imgstr = webcam_data.split(";base64,")
-                raw_data = base64.b64decode(imgstr)
-
-                if len(raw_data) > MAX_UPLOAD_SIZE:
-                    return render(request, "index.html", {
-                        "error_message": "Image is too large. Please upload a smaller image."
-                    })
-
-                import io
-                from PIL import Image
-
-                with Image.open(io.BytesIO(raw_data)) as test_img:
-                    test_fmt = (test_img.format or "").upper()
-                    if test_fmt not in ALLOWED_PIL_FORMATS:
-                        return render(request, "index.html", {
-                            "error_message": "Unsupported image format. Please upload a JPG, JPEG, PNG, or WEBP image."
-                        })
-                    test_img.verify()
-
-                ext = "jpg" if test_fmt == "JPEG" else test_fmt.lower()
-                image = ContentFile(raw_data, name=f"captured_hand.{ext}")
-
-            except Exception as e:
-                print("Webcam decode error:", e)
-                return render(request, "index.html", {
-                    "error_message": "Unable to read this image. Please upload a valid JPG, PNG, or WEBP image."
-                })
-
-        # Case 2: Uploaded image file
-        elif image:
-            # 1. Size check
-            if image.size > MAX_UPLOAD_SIZE:
-                return render(request, "index.html", {
-                    "error_message": "Image is too large. Please upload a smaller image."
-                })
-
-            # 2. File extension check
-            ext = os.path.splitext(image.name)[1].lower()
-            if ext not in ALLOWED_EXTENSIONS:
-                return render(request, "index.html", {
-                    "error_message": "Unsupported image format. Please upload a JPG, JPEG, PNG, or WEBP image."
-                })
-
-            # 3. MIME type check
-            content_type = getattr(image, "content_type", "").lower()
-            if content_type and content_type not in ALLOWED_MIME_TYPES:
-                return render(request, "index.html", {
-                    "error_message": "Unsupported image format. Please upload a JPG, JPEG, PNG, or WEBP image."
-                })
-
-            # 4. Deep Image Content & Integrity Verification via Pillow
-            try:
-                from PIL import Image
-
-                image.seek(0)
-                with Image.open(image) as test_img:
-                    test_fmt = (test_img.format or "").upper()
-                    if test_fmt not in ALLOWED_PIL_FORMATS:
-                        return render(request, "index.html", {
-                            "error_message": "Unsupported image format. Please upload a JPG, JPEG, PNG, or WEBP image."
-                        })
-                    test_img.verify()
-                image.seek(0)
-
-            except Exception as img_err:
-                print("Image verification error:", img_err)
-                return render(request, "index.html", {
-                    "error_message": "Unable to read this image. Please upload a valid JPG, PNG, or WEBP image."
-                })
-
-        if image:
-            obj = HandMeasurement.objects.create(image=image)
-            return redirect("result", pk=obj.id)
-
-    return render(request, "index.html")
-
-
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_POST
-from .services import run_pipeline
-
-
-def result(request, pk):
+def api_health(request):
     """
-    Renders the HTML analysis report page for an uploaded hand measurement.
-    Reuses the shared local AI processing pipeline.
+    API Health and Root Information Endpoint.
+    Returns operational status and active API endpoint information.
     """
-    obj = get_object_or_404(HandMeasurement, id=pk)
-
-    try:
-        original_image_url = obj.image.url
-    except Exception:
-        original_image_url = ""
-
-    try:
-        pipeline_res = run_pipeline(obj.image.path, request=request, db_obj=obj)
-        coin_detected = pipeline_res["coin_detected"]
-        landmark_count = pipeline_res["landmark_count"]
-        identified_fingers = pipeline_res["identified_fingers"]
-        processed_image_url = pipeline_res["processed_image_url"]
-    except Exception as e:
-        print("=" * 60)
-        print("LOCAL AI INFERENCE ERROR")
-        print(e)
-        print("=" * 60)
-        coin_detected = False
-        landmark_count = 0
-        identified_fingers = []
-        processed_image_url = ""
-
-    if not processed_image_url:
-        processed_image_url = original_image_url
-
-    context = {
-        "obj": obj,
-        "original_image_url": original_image_url,
-        "processed_image": processed_image_url,
-        "identified_fingers": identified_fingers,
-        "landmark_count": landmark_count,
-        "coin_detected": coin_detected,
-    }
-
-    return render(request, "result.html", context)
+    return JsonResponse({
+        "status": "healthy",
+        "service": "PressOn AI Measurement API",
+        "version": "1.0.0",
+        "endpoints": {
+            "analyze": "/api/analyze/",
+            "health": "/api/health/"
+        }
+    }, status=200)
 
 
 @csrf_exempt

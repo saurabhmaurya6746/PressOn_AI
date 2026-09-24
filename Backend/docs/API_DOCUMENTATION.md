@@ -87,6 +87,24 @@ Returned when the image is valid, the ₹10 reference coin is verified, hand lan
 }
 ```
 
+### Recommended Nail Size Chart (Sizes 0 to 9)
+
+The API automatically maps detected nail width (in mm) into standard press-on nail sizes:
+
+| Nail Number / Size | Nominal Width | Calibrated Width Range |
+|---|---|---|
+| **Size 0** | 18 mm | $\ge 17.0\text{ mm}$ |
+| **Size 1** | 16 mm | $15.5\text{ mm} \le \text{width} < 17.0\text{ mm}$ |
+| **Size 2** | 15 mm | $14.5\text{ mm} \le \text{width} < 15.5\text{ mm}$ |
+| **Size 3** | 14 mm | $13.5\text{ mm} \le \text{width} < 14.5\text{ mm}$ |
+| **Size 4** | 13 mm | $12.5\text{ mm} \le \text{width} < 13.5\text{ mm}$ |
+| **Size 5** | 12 mm | $11.5\text{ mm} \le \text{width} < 12.5\text{ mm}$ |
+| **Size 6** | 11 mm | $10.5\text{ mm} \le \text{width} < 11.5\text{ mm}$ |
+| **Size 7** | 10 mm | $9.5\text{ mm} \le \text{width} < 10.5\text{ mm}$ |
+| **Size 8** | 9 mm | $8.5\text{ mm} \le \text{width} < 9.5\text{ mm}$ |
+| **Size 9** | 8 mm | $7.5\text{ mm} \le \text{width} < 8.5\text{ mm}$ |
+| **Outside supported size range** | N/A | $< 7.5\text{ mm}$ |
+
 ### 2. Error Responses
 
 #### `400 Bad Request`

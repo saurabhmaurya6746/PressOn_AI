@@ -14,93 +14,91 @@ def create_test_image(format_name):
     return file_obj.read()
 
 
+class ApiHealthCheckTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+
+    def test_root_endpoint_returns_health_json(self):
+        """Root GET / returns API health JSON without serving HTML."""
+        response = self.client.get("/")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["status"], "healthy")
+        self.assertIn("service", data)
+
+    def test_api_health_endpoint_returns_json(self):
+        """GET /api/health/ returns API health JSON."""
+        response = self.client.get(reverse("api_health"))
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["status"], "healthy")
+
+
 class ImageUploadValidationTests(TestCase):
     def setUp(self):
         self.client = Client()
-        self.home_url = reverse("home")
+        self.api_url = reverse("api_analyze")
 
-    def test_01_valid_jpg_upload(self):
-        """Valid JPG upload succeeds and redirects to result."""
-        img_bytes = create_test_image("JPEG")
-        uploaded = SimpleUploadedFile("hand_sample.jpg", img_bytes, content_type="image/jpeg")
-        response = self.client.post(self.home_url, {"image": uploaded})
-        self.assertEqual(response.status_code, 302)
-        self.assertTrue(response.url.startswith("/result/"))
-
-    def test_02_valid_jpeg_upload(self):
-        """Valid JPEG upload succeeds and redirects to result."""
-        img_bytes = create_test_image("JPEG")
-        uploaded = SimpleUploadedFile("hand_sample.jpeg", img_bytes, content_type="image/jpeg")
-        response = self.client.post(self.home_url, {"image": uploaded})
-        self.assertEqual(response.status_code, 302)
-        self.assertTrue(response.url.startswith("/result/"))
-
-    def test_03_valid_png_upload(self):
-        """Valid PNG upload succeeds and redirects to result."""
-        img_bytes = create_test_image("PNG")
-        uploaded = SimpleUploadedFile("hand_sample.png", img_bytes, content_type="image/png")
-        response = self.client.post(self.home_url, {"image": uploaded})
-        self.assertEqual(response.status_code, 302)
-        self.assertTrue(response.url.startswith("/result/"))
-
-    def test_04_valid_webp_upload(self):
-        """Valid WEBP upload succeeds and redirects to result."""
-        img_bytes = create_test_image("WEBP")
-        uploaded = SimpleUploadedFile("hand_sample.webp", img_bytes, content_type="image/webp")
-        response = self.client.post(self.home_url, {"image": uploaded})
-        self.assertEqual(response.status_code, 302)
-        self.assertTrue(response.url.startswith("/result/"))
-
-    def test_05_unsupported_pdf_upload(self):
+    def test_01_unsupported_pdf_upload(self):
         """Uploading a PDF is rejected with exact format error message."""
         fake_pdf = b"%PDF-1.4 test content fake pdf"
         uploaded = SimpleUploadedFile("document.pdf", fake_pdf, content_type="application/pdf")
-        response = self.client.post(self.home_url, {"image": uploaded})
-        self.assertEqual(response.status_code, 200)
+        response = self.client.post(self.api_url, {"image": uploaded})
+        self.assertEqual(response.status_code, 400)
+        data = response.json()
+        self.assertFalse(data["success"])
         self.assertEqual(
-            response.context.get("error_message"),
+            data["error"],
             "Unsupported image format. Please upload a JPG, JPEG, PNG, or WEBP image."
         )
 
-    def test_06_unsupported_gif_upload(self):
+    def test_02_unsupported_gif_upload(self):
         """Uploading a GIF is rejected with exact format error message."""
         fake_gif = b"GIF89a" + b"\x00" * 20
         uploaded = SimpleUploadedFile("animated.gif", fake_gif, content_type="image/gif")
-        response = self.client.post(self.home_url, {"image": uploaded})
-        self.assertEqual(response.status_code, 200)
+        response = self.client.post(self.api_url, {"image": uploaded})
+        self.assertEqual(response.status_code, 400)
+        data = response.json()
+        self.assertFalse(data["success"])
         self.assertEqual(
-            response.context.get("error_message"),
+            data["error"],
             "Unsupported image format. Please upload a JPG, JPEG, PNG, or WEBP image."
         )
 
-    def test_07_corrupted_or_disguised_file(self):
+    def test_03_corrupted_or_disguised_file(self):
         """File with .jpg extension but corrupted/non-image data is rejected."""
         garbage_bytes = b"This is definitely not a valid JPEG image file header!"
         uploaded = SimpleUploadedFile("corrupted.jpg", garbage_bytes, content_type="image/jpeg")
-        response = self.client.post(self.home_url, {"image": uploaded})
-        self.assertEqual(response.status_code, 200)
+        response = self.client.post(self.api_url, {"image": uploaded})
+        self.assertEqual(response.status_code, 400)
+        data = response.json()
+        self.assertFalse(data["success"])
         self.assertEqual(
-            response.context.get("error_message"),
+            data["error"],
             "Unable to read this image. Please upload a valid JPG, PNG, or WEBP image."
         )
 
-    def test_08_empty_submission(self):
-        """Submitting without selecting a file or camera image displays error."""
-        response = self.client.post(self.home_url, {})
-        self.assertEqual(response.status_code, 200)
+    def test_04_empty_submission(self):
+        """Submitting without selecting a file returns 400 with missing image error."""
+        response = self.client.post(self.api_url, {})
+        self.assertEqual(response.status_code, 400)
+        data = response.json()
+        self.assertFalse(data["success"])
         self.assertEqual(
-            response.context.get("error_message"),
-            "Please select an image first."
+            data["error"],
+            "Please provide an image file in the 'image' field."
         )
 
-    def test_09_oversized_file(self):
+    def test_05_oversized_file(self):
         """File exceeding 15MB is rejected with size error."""
         oversized_data = b"0" * (15 * 1024 * 1024 + 1024)
         uploaded = SimpleUploadedFile("huge.jpg", oversized_data, content_type="image/jpeg")
-        response = self.client.post(self.home_url, {"image": uploaded})
-        self.assertEqual(response.status_code, 200)
+        response = self.client.post(self.api_url, {"image": uploaded})
+        self.assertEqual(response.status_code, 400)
+        data = response.json()
+        self.assertFalse(data["success"])
         self.assertEqual(
-            response.context.get("error_message"),
+            data["error"],
             "Image is too large. Please upload a smaller image."
         )
 
@@ -263,12 +261,11 @@ from utils.size_recommender import recommend_size, SIZE_CHART
 
 
 class SizeRecommenderTests(TestCase):
-    """Unit tests for the authoritative Press-On AI nail size mapping (Sizes 0 to 8)."""
+    """Unit tests for the authoritative Press-On AI nail size mapping (Sizes 0 to 9)."""
 
     def test_approved_exact_nominal_sizes(self):
         """Tests that nominal nail widths map to correct sizes."""
-        self.assertEqual(recommend_size(18.5), "0")
-        self.assertEqual(recommend_size(17.0), "0")
+        self.assertEqual(recommend_size(18.0), "0")
         self.assertEqual(recommend_size(16.0), "1")
         self.assertEqual(recommend_size(15.0), "2")
         self.assertEqual(recommend_size(14.0), "3")
@@ -277,11 +274,13 @@ class SizeRecommenderTests(TestCase):
         self.assertEqual(recommend_size(11.0), "6")
         self.assertEqual(recommend_size(10.0), "7")
         self.assertEqual(recommend_size(9.0), "8")
+        self.assertEqual(recommend_size(8.0), "9")
 
     def test_approved_midpoint_intervals(self):
         """Tests interval boundaries and values between nominal points."""
-        self.assertEqual(recommend_size(17.5), "0")
-        self.assertEqual(recommend_size(16.5), "0")
+        self.assertEqual(recommend_size(19.0), "0")
+        self.assertEqual(recommend_size(17.0), "0")
+        self.assertEqual(recommend_size(16.5), "1")
         self.assertEqual(recommend_size(15.5), "1")
         self.assertEqual(recommend_size(14.5), "2")
         self.assertEqual(recommend_size(13.5), "3")
@@ -289,12 +288,14 @@ class SizeRecommenderTests(TestCase):
         self.assertEqual(recommend_size(11.5), "5")
         self.assertEqual(recommend_size(10.5), "6")
         self.assertEqual(recommend_size(9.5), "7")
-        self.assertEqual(recommend_size(9.2), "8")
+        self.assertEqual(recommend_size(8.5), "8")
+        self.assertEqual(recommend_size(8.2), "9")
+        self.assertEqual(recommend_size(7.5), "9")
 
     def test_outside_supported_range(self):
-        """Tests that widths below 9.0 mm return 'Outside supported size range' without inventing Size 9."""
+        """Tests that widths below 7.5 mm return 'Outside supported size range'."""
+        self.assertEqual(recommend_size(7.49), "Outside supported size range")
         self.assertEqual(recommend_size(6.68), "Outside supported size range")
-        self.assertEqual(recommend_size(8.99), "Outside supported size range")
         self.assertEqual(recommend_size(0.0), "Outside supported size range")
         self.assertEqual(recommend_size(-2.5), "Outside supported size range")
 
